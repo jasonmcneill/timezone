@@ -1,3 +1,13 @@
+Date.prototype.stdTimezoneOffset = function() {
+  var jan = new Date(this.getFullYear(), 0, 1);
+  var jul = new Date(this.getFullYear(), 6, 1);
+  return Math.max(jan.getTimezoneOffset(), jul.getTimezoneOffset());
+};
+
+Date.prototype.isDstObserved = function() {
+  return this.getTimezoneOffset() < this.stdTimezoneOffset();
+};
+
 var getTimeZone = function() {
   var zones = [
     {
@@ -6,7 +16,8 @@ var getTimeZone = function() {
       dst: -4,
       abbr: "ET",
       stdAbbr: "EST",
-      dstAbbr: "EDT"
+      dstAbbr: "EDT",
+      isDST: false
     },
     {
       name: "America/Chicago",
@@ -14,14 +25,16 @@ var getTimeZone = function() {
       dst: -5,
       abbr: "CT",
       stdAbbr: "CST",
-      dstAbbr: "CDT"
+      dstAbbr: "CDT",
+      isDST: false
     },		{
       name: "America/Denver",
       std: -7,
       dst: -6,
       abbr: "MT",
       stdAbbr: "MST",
-      dstAbbr: "MDT"
+      dstAbbr: "MDT",
+      isDST: false
     },
     {
       name: "America/Phoenix",
@@ -29,7 +42,8 @@ var getTimeZone = function() {
       dst: -7,
       abbr: "MT",
       stdAbbr: "MST",
-      dstAbbr: "MST"
+      dstAbbr: "MST",
+      isDST: false
     },
     {
       name: "America/Los_Angeles",
@@ -37,7 +51,8 @@ var getTimeZone = function() {
       dst: -7,
       abbr: "PT",
       stdAbbr: "PST",
-      dstAbbr: "PDT"
+      dstAbbr: "PDT",
+      isDST: false
     },
     {
       name: "America/Anchorage",
@@ -45,7 +60,8 @@ var getTimeZone = function() {
       dst: -8,
       abbr: "AT",
       stdAbbr: "AST",
-      dstAbbr: "ADT"
+      dstAbbr: "ADT",
+      isDST: false
     },
     {
       name: "America/Adak",
@@ -53,7 +69,8 @@ var getTimeZone = function() {
       dst: -9,
       abbr: "HT",
       stdAbbr: "HST",
-      dstAbbr: "HDT"
+      dstAbbr: "HDT",
+      isDST: false
     },
     {
       name: "Pacific/Honolulu",
@@ -61,13 +78,18 @@ var getTimeZone = function() {
       dst: -10,
       abbr: "HT",
       stdAbbr: "HST",
-      dstAbbr: "HST"
+      dstAbbr: "HST",
+      isDST: false
     }
   ];
 
   var timeZone = "";
   var zonesLen = zones.length;
+
   var getTimezoneByInternationalizationAPI = function() {
+    var d = new Date();
+    var i = 0;
+    var isDstInEffect = false;
     try {
       zoneName = Intl.DateTimeFormat().resolvedOptions().timeZone;
     } catch(e) {
@@ -75,27 +97,39 @@ var getTimeZone = function() {
     }
     zoneName = Intl.DateTimeFormat().resolvedOptions().timeZone;
     zoneObj = "";
-    for(var i=0; i<zonesLen; i++) {
+    if(d.isDstObserved) isDstInEffect = true;
+    for(i=0; i<zonesLen; i++) {
       if(zoneName === zones[i].name) {
         zoneObj = zones[i];
         break;
       }
     }
+    if(isDstInEffect) zoneObj.isDST = true;
     return zoneObj;
   };
+
   var getTimezoneByOffset = function() {
     var d = new Date();
+    var i = 0;
+    var isDstInEffect = false;
     var timeZoneOffsetMinutes = d.getTimezoneOffset();
     var timeZoneOffset = Math.abs(timeZoneOffsetMinutes / 60) * -1;
     var zoneObj = "";
-    for(var i=0; i<zonesLen; i++) {
-      if(timeZoneOffset === zones[i].std) {
+    var gmtOffset = 0;
+    if(d.isDstObserved) isDstInEffect = true;
+    for(i=0; i<zonesLen; i++) {
+      gmtOffset = zones[i].std;
+      if(isDstInEffect) gmtOffset = zones[i].dst;
+      if(timeZoneOffset === gmtOffset) {
         zoneObj = zones[i];
         break;
-      }
+      }					
     }
+    if(isDstInEffect) zoneObj.isDST = true;
     return zoneObj;
   }
+
+  // Modern browsers use Internationalization API; older browsers use timezone offset.
   try {
     timeZone = getTimezoneByInternationalizationAPI();
   } catch(e) {
@@ -104,6 +138,8 @@ var getTimeZone = function() {
   if(typeof timeZone !== "object") {
     timeZone = getTimezoneByOffset();
   }
+
+  // Return the timezone object
   return timeZone;
 
 };
