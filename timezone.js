@@ -27,7 +27,8 @@ var getTimeZone = function() {
       stdAbbr: "CST",
       dstAbbr: "CDT",
       isDST: false
-    },		{
+    },
+    {
       name: "America/Denver",
       std: -7,
       dst: -6,
